@@ -1,6 +1,8 @@
 # pillpal
 
-A new Flutter project.
+A new Flutter project. I am currently working for the Project.
+
+I will update everything once the App is ready.
 
 ## Getting Started
 
