@@ -4,6 +4,8 @@ A new Flutter project. I am currently working for the Project.
 
 I will update everything once the App is ready.
 
+BTW this is my first Flutter App. I am learning Flutter in while making the App.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
