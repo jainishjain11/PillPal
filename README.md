@@ -1,4 +1,4 @@
-# pillpal
+# PillPal
 
 A new Flutter project. I am currently working for the Project.
 
