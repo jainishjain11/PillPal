@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import '../models/medicine.dart';
+import '../services/notification_service.dart';
 
 class AddMedicineScreen extends StatefulWidget {
   const AddMedicineScreen({super.key});
@@ -12,12 +14,16 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _dosageController = TextEditingController();
+  final _pillCountController = TextEditingController();
+  final _refillThresholdController = TextEditingController();
   TimeOfDay _selectedTime = TimeOfDay.now();
 
   @override
   void dispose() {
     _nameController.dispose();
     _dosageController.dispose();
+    _pillCountController.dispose();
+    _refillThresholdController.dispose();
     super.dispose();
   }
 
@@ -33,9 +39,8 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     }
   }
 
-  void _saveMedicine() {
+  void _saveMedicine() async {
     if (_formKey.currentState!.validate()) {
-      // For now, just print the result. We'll save it later!
       final medicine = Medicine(
         name: _nameController.text,
         time: DateTime(
@@ -46,9 +51,24 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
           _selectedTime.minute,
         ),
         dosage: int.tryParse(_dosageController.text) ?? 1,
+        pillCount: int.tryParse(_pillCountController.text) ?? 0,
+        refillThreshold: int.tryParse(_refillThresholdController.text) ?? 3,
       );
-      print('Medicine added: ${medicine.name}, ${medicine.dosage}mg at ${medicine.time}');
-      Navigator.pop(context); // Go back to previous screen
+
+      final box = Hive.box<Medicine>('medicines');
+      await box.add(medicine);
+
+      // Schedule notification for medication time
+      await NotificationService.scheduleNotification(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: 'Time to take ${medicine.name}!',
+        body: 'Dosage: ${medicine.dosage}mg',
+        scheduledTime: medicine.time,
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -60,7 +80,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
             children: [
               TextFormField(
                 controller: _nameController,
@@ -82,6 +102,20 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   icon: const Icon(Icons.access_time),
                   onPressed: () => _pickTime(context),
                 ),
+              ),
+              TextFormField(
+                controller: _pillCountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Total Pills (for refill reminder)'),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter total pills' : null,
+              ),
+              TextFormField(
+                controller: _refillThresholdController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Refill Reminder Threshold (e.g., 3)'),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter threshold' : null,
               ),
               const SizedBox(height: 24),
               ElevatedButton(

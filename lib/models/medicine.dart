@@ -1,21 +1,32 @@
 import 'package:hive/hive.dart';
 
 part 'medicine.g.dart';
-
 @HiveType(typeId: 0)
 class Medicine extends HiveObject {
   @HiveField(0)
-  final String name;
+  String name;
 
   @HiveField(1)
-  final DateTime time;
+  DateTime time;
 
   @HiveField(2)
-  final int dosage;
+  int dosage;
+
+  @HiveField(3)
+  List<DateTime> takenHistory;
+
+  @HiveField(4)
+  int pillCount;
+
+  @HiveField(5)
+  int refillThreshold;
 
   Medicine({
     required this.name,
     required this.time,
     required this.dosage,
-  });
+    required this.pillCount,
+    required this.refillThreshold,
+    List<DateTime>? takenHistory,
+  }) : takenHistory = takenHistory ?? [];
 }

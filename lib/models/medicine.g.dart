@@ -20,19 +20,28 @@ class MedicineAdapter extends TypeAdapter<Medicine> {
       name: fields[0] as String,
       time: fields[1] as DateTime,
       dosage: fields[2] as int,
+      pillCount: fields[4] as int,
+      refillThreshold: fields[5] as int,
+      takenHistory: (fields[3] as List?)?.cast<DateTime>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Medicine obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
       ..write(obj.time)
       ..writeByte(2)
-      ..write(obj.dosage);
+      ..write(obj.dosage)
+      ..writeByte(3)
+      ..write(obj.takenHistory)
+      ..writeByte(4)
+      ..write(obj.pillCount)
+      ..writeByte(5)
+      ..write(obj.refillThreshold);
   }
 
   @override
