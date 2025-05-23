@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
 import '../models/medicine.dart';
 
 class EditMedicineScreen extends StatefulWidget {
