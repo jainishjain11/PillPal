@@ -23,13 +23,15 @@ class MedicineAdapter extends TypeAdapter<Medicine> {
       pillCount: fields[4] as int,
       refillThreshold: fields[5] as int,
       takenHistory: (fields[3] as List?)?.cast<DateTime>(),
+      reminderTimes: (fields[6] as List?)?.cast<String>(),
+      reminderDays: (fields[7] as List?)?.cast<int>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Medicine obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -41,7 +43,11 @@ class MedicineAdapter extends TypeAdapter<Medicine> {
       ..writeByte(4)
       ..write(obj.pillCount)
       ..writeByte(5)
-      ..write(obj.refillThreshold);
+      ..write(obj.refillThreshold)
+      ..writeByte(6)
+      ..write(obj.reminderTimes)
+      ..writeByte(7)
+      ..write(obj.reminderDays);
   }
 
   @override

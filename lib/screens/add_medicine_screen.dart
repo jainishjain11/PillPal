@@ -16,7 +16,9 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   final _dosageController = TextEditingController();
   final _pillCountController = TextEditingController();
   final _refillThresholdController = TextEditingController();
-  TimeOfDay _selectedTime = TimeOfDay.now();
+  
+  List<String> _reminderTimes = [];
+  List<int> _selectedDays = List.generate(7, (index) => index + 1);
 
   @override
   void dispose() {
@@ -27,48 +29,43 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     super.dispose();
   }
 
-  void _pickTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-    );
-    if (picked != null && picked != _selectedTime) {
-      setState(() {
-        _selectedTime = picked;
-      });
-    }
+  void _addTime(TimeOfDay time) {
+    setState(() {
+      _reminderTimes.add(
+        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+      );
+    });
+  }
+
+  void _removeTime(int index) {
+    setState(() => _reminderTimes.removeAt(index));
+  }
+
+  void _toggleDay(int day) {
+    setState(() {
+      _selectedDays.contains(day)
+          ? _selectedDays.remove(day)
+          : _selectedDays.add(day);
+    });
   }
 
   void _saveMedicine() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _reminderTimes.isNotEmpty) {
       final medicine = Medicine(
         name: _nameController.text,
-        time: DateTime(
-          DateTime.now().year,
-          DateTime.now().month,
-          DateTime.now().day,
-          _selectedTime.hour,
-          _selectedTime.minute,
-        ),
+        time: DateTime.now(), // Original time (deprecated)
         dosage: int.tryParse(_dosageController.text) ?? 1,
         pillCount: int.tryParse(_pillCountController.text) ?? 0,
         refillThreshold: int.tryParse(_refillThresholdController.text) ?? 3,
+        reminderTimes: _reminderTimes,
+        reminderDays: _selectedDays,
       );
 
       final box = Hive.box<Medicine>('medicines');
       await box.add(medicine);
+      await NotificationService.scheduleAllReminders(medicine);
 
-      // Schedule notification for medication time
-      await NotificationService.scheduleNotification(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: 'Time to take ${medicine.name}!',
-        body: 'Dosage: ${medicine.dosage}mg',
-        scheduledTime: medicine.time,
-      );
-
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
+      if (context.mounted) Navigator.pop(context);
     }
   }
 
@@ -82,42 +79,97 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
           key: _formKey,
           child: ListView(
             children: [
+              // Medication Name
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Medication Name'),
+                decoration: const InputDecoration(
+                  labelText: 'Medication Name',
+                  hintText: 'e.g., Paracetamol',
+                ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter medication name' : null,
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 16),
+
+              // Dosage
               TextFormField(
                 controller: _dosageController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Dosage (mg)'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter dosage' : null,
-              ),
-              ListTile(
-                title: const Text('Time to Take'),
-                subtitle: Text(_selectedTime.format(context)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.access_time),
-                  onPressed: () => _pickTime(context),
+                decoration: const InputDecoration(
+                  labelText: 'Dosage',
+                  hintText: 'e.g., 1 tablet, 5mg',
                 ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 16),
+
+              // Total Pills
               TextFormField(
                 controller: _pillCountController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Total Pills (for refill reminder)'),
+                decoration: const InputDecoration(
+                  labelText: 'Total Pills',
+                  hintText: 'e.g., 30',
+                ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter total pills' : null,
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 16),
+
+              // Refill Threshold
               TextFormField(
                 controller: _refillThresholdController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Refill Reminder Threshold (e.g., 3)'),
+                decoration: const InputDecoration(
+                  labelText: 'Refill Reminder When Left',
+                  hintText: 'e.g., 3',
+                ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter threshold' : null,
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 24),
+
+              // Days of Week Selector
+              const Text('Repeat on:', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                    .asMap()
+                    .entries
+                    .map((entry) {
+                  final dayIndex = entry.key + 1;
+                  return FilterChip(
+                    label: Text(entry.value),
+                    selected: _selectedDays.contains(dayIndex),
+                    onSelected: (_) => _toggleDay(dayIndex),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+
+              // Reminder Times
+              const Text('Reminder Times:', style: TextStyle(fontSize: 16)),
+              ..._reminderTimes.asMap().entries.map((entry) => ListTile(
+                    title: Text(entry.value),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => _removeTime(entry.key),
+                    ),
+                  )),
+              ElevatedButton(
+                onPressed: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.now(),
+                  );
+                  if (picked != null) _addTime(picked);
+                },
+                child: const Text('Add Reminder Time'),
+              ),
+              const SizedBox(height: 24),
+
+              // Save Button
               ElevatedButton(
                 onPressed: _saveMedicine,
                 child: const Text('Save Medication'),
