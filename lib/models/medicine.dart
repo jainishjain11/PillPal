@@ -28,6 +28,10 @@ class Medicine extends HiveObject {
   @HiveField(7)
   List<int> reminderDays; // 1=Monday to 7=Sunday
 
+  @HiveField(8)
+  String? alarmSound; // Path or identifier for the selected sound
+
+
   Medicine({
     required this.name,
     required this.time,

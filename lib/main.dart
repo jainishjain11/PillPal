@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import 'screens/add_medicine_screen.dart';
-import 'screens/home_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/medicine.dart';
 import 'services/notification_service.dart';
+import 'screens/home_screen.dart';
+import 'screens/add_medicine_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Hive.initFlutter();
   Hive.registerAdapter(MedicineAdapter());
   await Hive.openBox<Medicine>('medicines');
   await NotificationService.initialize();
+
   runApp(const PillPalApp());
 }
 
