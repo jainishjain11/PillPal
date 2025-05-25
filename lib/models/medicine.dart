@@ -8,7 +8,7 @@ class Medicine extends HiveObject {
   String name;
 
   @HiveField(1)
-  DateTime time; // Original time (now optional in UI)
+  DateTime time; // Will be deprecated
 
   @HiveField(2)
   int dosage;
@@ -23,14 +23,13 @@ class Medicine extends HiveObject {
   int refillThreshold;
 
   @HiveField(6)
-  List<String> reminderTimes; // Stores times as "HH:mm" strings
+  List<String> reminderTimes;
 
   @HiveField(7)
-  List<int> reminderDays; // 1=Monday to 7=Sunday
+  List<int> reminderDays;
 
   @HiveField(8)
-  String? alarmSound; // Path or identifier for the selected sound
-
+  String? alarmSound;
 
   Medicine({
     required this.name,
@@ -38,11 +37,9 @@ class Medicine extends HiveObject {
     required this.dosage,
     required this.pillCount,
     required this.refillThreshold,
-    List<DateTime>? takenHistory,
-    List<String>? reminderTimes,
-    List<int>? reminderDays,
-  })  : takenHistory = takenHistory ?? [],
-        reminderTimes = reminderTimes ?? 
-          ["${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}"],
-        reminderDays = reminderDays ?? List.generate(7, (i) => i + 1); // Default: daily
+    this.takenHistory = const [],
+    required this.reminderTimes,
+    required this.reminderDays,
+    this.alarmSound,
+  });
 }

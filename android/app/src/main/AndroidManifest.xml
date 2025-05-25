@@ -3,7 +3,8 @@
     <application
         android:label="pillpal"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:name="io.flutter.app.FlutterApplication">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -22,10 +22,11 @@ class MedicineAdapter extends TypeAdapter<Medicine> {
       dosage: fields[2] as int,
       pillCount: fields[4] as int,
       refillThreshold: fields[5] as int,
-      takenHistory: (fields[3] as List?)?.cast<DateTime>(),
-      reminderTimes: (fields[6] as List?)?.cast<String>(),
-      reminderDays: (fields[7] as List?)?.cast<int>(),
-    )..alarmSound = fields[8] as String?;
+      takenHistory: (fields[3] as List).cast<DateTime>(),
+      reminderTimes: (fields[6] as List).cast<String>(),
+      reminderDays: (fields[7] as List).cast<int>(),
+      alarmSound: fields[8] as String?,
+    );
   }
 
   @override

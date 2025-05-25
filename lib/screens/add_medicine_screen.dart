@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../models/medicine.dart';
 import '../services/notification_service.dart';
+import '../services/alarm_service.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 
 class AddMedicineScreen extends StatefulWidget {
   const AddMedicineScreen({super.key});
@@ -16,9 +18,9 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   final _dosageController = TextEditingController();
   final _pillCountController = TextEditingController();
   final _refillThresholdController = TextEditingController();
-  
+
   List<String> _reminderTimes = [];
-  List<int> _selectedDays = List.generate(7, (index) => index + 1);
+  List<int> _selectedDays = List.generate(7, (index) => index + 1); // Mon-Sun
 
   @override
   void dispose() {
@@ -49,21 +51,50 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     });
   }
 
-  void _saveMedicine() async {
+  Future<void> _saveMedicine() async {
     if (_formKey.currentState!.validate() && _reminderTimes.isNotEmpty) {
       final medicine = Medicine(
         name: _nameController.text,
-        time: DateTime.now(), // Original time (deprecated)
-        dosage: int.tryParse(_dosageController.text) ?? 1,
+        time: DateTime.now(), // Deprecated but still required
+        dosage: int.tryParse(_dosageController.text) ?? 1, // Ensure int
         pillCount: int.tryParse(_pillCountController.text) ?? 0,
         refillThreshold: int.tryParse(_refillThresholdController.text) ?? 3,
         reminderTimes: _reminderTimes,
         reminderDays: _selectedDays,
+        alarmSound: 'default', // Add your sound selection logic here
       );
 
       final box = Hive.box<Medicine>('medicines');
       await box.add(medicine);
+
+      // Schedule notifications
       await NotificationService.scheduleAllReminders(medicine);
+
+      // Schedule alarms
+      for (final day in _selectedDays) {
+        for (final time in _reminderTimes) {
+          final parts = time.split(':');
+          final now = DateTime.now();
+          int daysUntil = (day - now.weekday) % 7;
+          if (daysUntil < 0) daysUntil += 7;
+          
+          final scheduledTime = DateTime(
+            now.year,
+            now.month,
+            now.day + daysUntil,
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+          );
+
+          await AndroidAlarmManager.oneShotAt(
+            scheduledTime,
+            medicine.key.hashCode + day.hashCode + time.hashCode,
+            alarmCallback,
+            exact: true,
+            wakeup: true,
+          );
+        }
+      }
 
       if (context.mounted) Navigator.pop(context);
     }
@@ -79,7 +110,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              // Medication Name
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -87,23 +117,22 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   hintText: 'e.g., Paracetamol',
                 ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Required' : null,
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
 
-              // Dosage
               TextFormField(
                 controller: _dosageController,
+                keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Dosage',
-                  hintText: 'e.g., 1 tablet, 5mg',
+                  labelText: 'Dosage (e.g., 1 tablet)',
+                  hintText: 'Enter number of units',
                 ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Required' : null,
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
 
-              // Total Pills
               TextFormField(
                 controller: _pillCountController,
                 keyboardType: TextInputType.number,
@@ -112,24 +141,22 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   hintText: 'e.g., 30',
                 ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Required' : null,
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
 
-              // Refill Threshold
               TextFormField(
                 controller: _refillThresholdController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Refill Reminder When Left',
+                  labelText: 'Refill Threshold',
                   hintText: 'e.g., 3',
                 ),
                 validator: (value) =>
-                    value == null || value.isEmpty ? 'Required' : null,
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 24),
 
-              // Days of Week Selector
               const Text('Repeat on:', style: TextStyle(fontSize: 16)),
               const SizedBox(height: 8),
               Row(
@@ -148,7 +175,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Reminder Times
               const Text('Reminder Times:', style: TextStyle(fontSize: 16)),
               ..._reminderTimes.asMap().entries.map((entry) => ListTile(
                     title: Text(entry.value),
@@ -169,7 +195,6 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Save Button
               ElevatedButton(
                 onPressed: _saveMedicine,
                 child: const Text('Save Medication'),
