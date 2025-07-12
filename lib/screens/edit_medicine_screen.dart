@@ -41,7 +41,7 @@ class _EditMedicineScreenState extends State<EditMedicineScreen> {
     _refillThresholdController.dispose();
     super.dispose();
   }
-
+	// Add time function
   void _addTime(TimeOfDay time) {
     setState(() {
       _reminderTimes.add(
